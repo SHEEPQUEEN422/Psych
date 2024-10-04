@@ -1,6 +1,6 @@
-# hello
-# This is problem set 1
-## today is Oct2 Wednesday
+# HELLO
+# This is problem set 1 for Pschology class
+## Starting date is Oct2 Wednesday
 ### Psychology 
 Some basic Git commands are:
 ```
