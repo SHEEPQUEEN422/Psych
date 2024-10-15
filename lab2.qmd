@@ -1,0 +1,38 @@
+---
+title: "Lab2"
+format: 
+    html
+     toc: true
+editor: visual
+---
+
+```{r echo=FALSE}
+library(ggplot2)
+library(knitr)
+library(broom)
+opts_chunk$set(fig.width=8, fig.height=5, 
+               echo=TRUE, 
+               warning=FALSE, message=FALSE, 
+               cache=TRUE)
+```
+
+**Baidu sucks** *Bing is better* [bing link](http://bing.com)
+
+```{r}
+knitr::kable(head(mtcars), digits = 1)
+```
+
+```{r}
+mod <- lm(mpg ~ hp + cyl, data = mtcars)
+kable(tidy(mod), digits = 3)
+ts <- with(mtcars,t.test(hp[cyl==4], hp[cyl==6]))
+```
+```{r}
+# Install devtools package if necessary
+
+if(!"devtools" %in% rownames(installed.packages())) install.packages("devtools")
+
+# Install papaja
+
+devtools::install_github("crsh/papaja")
+```
