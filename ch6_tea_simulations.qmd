@@ -1,0 +1,464 @@
+---
+title: "Inference_simulations"
+format: html
+editor: visual
+---
+
+## Tips before getting started
+
+This is a document made to accompany some simulations from the Inference lecture in Psych 201a. The goal of this document is to continue learning in R/tidyverse but also to gain hands on experience simulating and manipulating data.\
+\
+If you need to install something, you can run `install.packages('tidyverse')`, where you substitute the name of the library
+
+You should have this repository cloned on your computer, ideally in a folder where you have all of your github repositories (e.g., `/brialong/Documents/GitHub/in_class_excercises\`)
+
+To understand what a function does, type `? [function_name]` where function_name referes to a function name in a loaded repostiry.
+
+# Setup
+
+```{r}
+set.seed(123) # good practice to set a random seed, or else different runs get you different results
+```
+
+## Import the functions & data that we need
+
+```{r}
+library(tidyverse)
+library(ggplot2) # plotting
+library(ggthemes) # optional, but nice
+```
+
+## Define the simulation function
+
+This makes "tea data", a tibble (dataframe) where there are a certain number of people in each condition (default = 48, i.e., n_total, with n_total/2 in each half)
+
+The averages of the two conditions are separated by a known effect ("delta") with some variance ("sigma"). You can change these around since we're simulating data!
+
+```{r}
+make_tea_data <- function(n_total = 48, sigma = 1.25, delta = 1.5) {
+  n_half <- n_total / 2
+  tibble(condition = c(rep("milk first", n_half), rep("tea first", n_half)),
+         rating = c(round(rnorm(n_half, mean = 3.5 + delta, sd = sigma)), 
+                    round(rnorm(n_half, mean = 3.5, sd = sigma)))) |>
+    mutate(rating = if_else(rating > 10, 10, rating), # truncate if greater than max/min of rating scale
+           rating = if_else(rating < 1, 1, rating))
+}
+```
+
+## Make data frames where we have small or larger samples of tea data for ONE experiment
+
+```{r}
+# here's, we're calling our custom functino, and specifying different inputs than the defaults (which are inside the parenthese up above)
+tea_data <- make_tea_data(n_total = 18, delta=1.5)
+```
+
+```{r}
+tea_data_highn <- make_tea_data(n_total = 48, delta=1.5)
+```
+
+To do: OK, look at these data frames. How long are they, what are the column names? Look at them in your console and in the environment if you want.
+
+To do: Write basic tidyverse code to calculate the mean of each condition (hint: use `group_by` and `summarize`)
+
+```{r}
+ mean_rating<- tea_data |>
+   group_by(condition) |>
+   summarize(mean_rating=mean(rating))
+ tea_data<-tea_data|>
+   left_join(mean_rating,by="condition")
+```
+
+## In this first draw, was it significant with N=9 or N=24 per group?
+
+OK, we can do t-tests already! I've done these within a pipe (whoops, I often use the old pipe operator because I have small hands)
+
+To do: Run these and look at the outputs by posting `out_low_n` in the console
+
+```{r}
+out_low_n <- tea_data %>%
+  t.test(rating ~ condition, data = ., paired = FALSE, var.equal = TRUE) 
+
+out_high_n <- tea_data_highn %>%
+  t.test(rating ~ condition, data = ., paired = FALSE, var.equal = TRUE) 
+```
+
+### Simulate 1000 experiments
+
+To do: Run these code blocks
+
+...where you have 18 participants per experiment with an average difference of 1.5 points in tea deliciousness on average
+
+```{r}
+samps <- tibble(sim = 1:1000) |> # 
+  mutate(data = map(sim, \(i) make_tea_data(n_total = 18, delta=1.5))) |>  # simulate
+  unnest(cols = data) # wrangle
+```
+
+...where you have 48 participants per experiment
+
+```{r}
+samps_highn <- tibble(sim = 1:1000) |> # 
+  mutate(data = map(sim, \(i) make_tea_data(n_total = 48, delta=1.5))) |>  # simulate
+  unnest(cols = data) # wrangle
+```
+
+### Summarize both of these simulations
+
+To do: Run these code blocks Do you understand what each line is doing here? (the map function above is hard, just focus here?)
+
+```{r}
+tea_data_summary <- samps |>
+  group_by(sim, condition) |> # group by simulation #, and condition
+  summarise(mean_rating = mean(rating)) |> # summarize across ratings
+  group_by(sim) |> # now get difference
+  summarise(delta = mean_rating[condition == "milk first"] -
+              mean_rating[condition == "tea first"])
+```
+
+```{r}
+tea_data_highn_summary <- samps_highn |>
+  group_by(sim, condition) |> # group by simulation #, and condition
+  summarise(mean_rating = mean(rating)) |> # summarize across ratings
+  group_by(sim) |> # now get difference
+  summarise(delta = mean_rating[condition == "milk first"] -
+              mean_rating[condition == "tea first"])
+```
+
+## Plot difference for low-n
+
+Let's make a plot to plot the differences in ratings across conditions To do: run these code blocks
+
+```{r}
+ggplot(data=tea_data_summary, aes(x=delta)) +
+  geom_histogram(alpha=.8, bins=20) +
+  theme_few()
+```
+
+Or simply
+
+```{r}
+hist(tea_data_summary$delta)
+```
+
+## Plot difference for higher-n
+
+To do: What's different about this distribution vs the one we just plotted?
+
+```{r}
+hist(tea_data_highn_summary$delta)
+```
+
+**Bonus** What happens if you run it again? Try varying the variance / mean of the effect when you change the "delta" and "sigma" values?
+
+What happens if you vary the random seed?
+
+# Now let's visualize what would happen under the null distribution in two ways
+
+First, by simulating no differences between conditions. Remember, it's the null model because DELTA (i.e., differences in conditions) is ZERO
+
+To do: Where in the function is it specifying that there is no difference between conditions?
+
+```{r}
+null_model <- tibble(sim = 1:1000) |>
+  mutate(data = map(sim, \(i) make_tea_data(n_total = 18, delta = 0))) |>
+  unnest(cols = data)
+
+null_model_summary <- null_model |>
+  group_by(sim, condition) |>
+  summarise(mean_rating = mean(rating)) |>
+  group_by(sim) |>
+  summarise(delta = mean_rating[condition == "milk first"] -
+              mean_rating[condition == "tea first"])
+  
+```
+
+To do: Explain what does this data look like and why
+
+```{r}
+ggplot(data=null_model_summary, aes(x=delta)) +
+  geom_histogram(alpha=.8, bins=20) +
+  theme_few()
+```
+
+# Permutations
+
+We're going to calculate the distribution of the difference between conditions when we've shuffled the condition labels
+
+This is the empirical null hypothesis (our H0, since we're comparing two conditions with a two-sample t-test)
+
+### First, let's shuffle the labels \~within each experiment\~
+
+```{r}
+tea_data_highn_shuffled <- samps_highn %>%
+  group_by(sim) %>% # for each experiment
+  mutate(condition_shuffled = sample(condition)) # shuffle the condition labels
+```
+
+To do: check you understanding -- what is "sim" here?
+
+```{r}
+tea_data_highn_shuffled_summary <- tea_data_highn_shuffled %>%
+  group_by(condition_shuffled, sim) %>% 
+  summarize(mean = mean(rating),
+            sd = sd(rating)) %>%
+  ungroup() %>% 
+  summarize(delta = diff(mean)) # get the difference in ratings between conditions for each experimental draw
+```
+
+To do: what does this histogram look like and why?
+
+```{R}
+hist(tea_data_highn_shuffled_summary$delta) #what does this histogram look like?
+```
+
+### Visualizing what happens when we shuffle
+
+OK, now see what happens to our raw data -- this is just from one simulation The color refers to the ORIGINAL label before we shuffled, but our condition difference is gone
+
+(Try replotting it so the colors refer to the condition_shuffled, modifying line 176)
+
+```{r}
+ggplot(data = tea_data_highn_shuffled %>% filter(sim==3),  # can change the actual simulation number here
+       mapping = aes(x = condition_shuffled, y = rating))+
+  geom_point(mapping = aes(color = condition), # color
+             alpha=.8,
+             position = position_jitter(height = .1,
+                                        width = 0.1)) +
+  stat_summary(fun.data = mean_cl_boot, # this boostraps the confidence interval
+               geom = "linerange",
+               size = 1) +
+  stat_summary(fun = "mean", # this calculates the average
+               geom = "point",
+               shape = 21,
+               color = "black",
+               fill = "white")+ 
+  scale_y_continuous(breaks = 0:10,
+                     labels = 0:10,
+                     limits = c(0, 10))
+```
+
+The idea is now that we can get a sampling distribution of the difference in the means between the two conditions (assuming that the null hypothesis were true), by randomly shuffling the labels and calculating the difference in means (and doing this many times). What we get is a distribution of the differences we would expect, if there was no effect of condition.
+
+First calculate the actual difference in a simulated dataset
+
+```{r}
+difference_actual = tea_data_highn %>%  # in ONE experiment
+  group_by(condition) %>% 
+  summarize(mean = mean(rating)) %>% 
+  pull(mean) %>% 
+  diff()
+```
+
+```{R}
+#plot the distribution of the differences 
+ggplot(data = tea_data_highn_shuffled_summary, aes(x=delta)) +
+  geom_histogram(aes(y = stat(density)),
+                 color = "black",
+                 fill = "lightblue",
+                 binwidth = 0.05) + 
+  stat_density(geom = "line",
+               size = 1.5,
+               bw = 0.2) +
+  geom_vline(xintercept = difference_actual, color = "red", size = 2) +
+  labs(x = "difference between means") 
+  
+
+```
+
+And we can then simply calculate the p-value by using some basic data wrangling (i.e. finding the proportion of differences that were as or more extreme than the one we observed).
+
+```{r}
+tea_data_highn_shuffled_summary %>% 
+  summarize(p_value = sum(delta <= difference_actual)/n())
+```
+
+You can also see this if you plot the distributions of the null vs empirical simulations next to each other (blue = null)
+
+```{r}
+ggplot(data=tea_data_highn_shuffled_summary, aes(x=delta)) +
+  geom_histogram(alpha=.4, bins=20, color='blue', fill='blue') +
+  geom_histogram(alpha=.8, bins=20, data=tea_data_highn_summary)
+  theme_few()
+```
+
+# Confidence intervals
+
+Done here with one experiment, you can choose which is "tea_dataset"
+
+```{r}
+# tea_dataset = tea_data
+tea_dataset = tea_data_highn
+```
+
+```{r}
+tea_ratings <- filter(tea_dataset, condition == "tea first")$rating
+milk_ratings <- filter(tea_dataset, condition == "milk first")$rating
+
+# could also do in a pipe like so, but then you have to grab the column below, as in tea_ratings$ratings; above is a vector
+# tea_ratings <- tea_data_highn %>%
+#   filter(condition=="tea first") %>%
+#   select(rating)
+```
+
+# Calculate a CI on the effect (difference between conditions)
+
+Uses a pooled standard deviation We're using the normal distribution here to calculate CIs since we know the population SD follows a normal
+
+Note that this is different than the CI calculated by the two-sample t-tests, where
+
+```{R}
+n_tea <- length(tea_ratings)
+n_milk <- length(milk_ratings)
+sd_tea <- sd(tea_ratings)
+sd_milk <- sd(milk_ratings)
+
+tea_sd_pooled <- sqrt(((n_tea - 1) * sd_tea ^ 2 + (n_milk - 1) * sd_milk ^ 2) / 
+                        (n_tea + n_milk - 2))
+
+tea_se <- tea_sd_pooled * sqrt((1 / n_tea) + (1 / n_milk))
+
+
+delta_hat <- mean(milk_ratings) - mean(tea_ratings)
+tea_ci_lower <- delta_hat - tea_se * qnorm(0.975)
+tea_ci_upper <- delta_hat + tea_se * qnorm(0.975)
+```
+
+# To get the 95% CI with the t-distribution
+
+You need to get the appropriate t-statistic from the distribution, which incorporates information about the degrees of freedom
+
+The t-distribution is more appropriate when you have smaller sample sizes and is what is used in t.tests
+
+```{r}
+num_observations = length(tea_dataset$rating)
+df = num_observations-2 # for two sample t.test
+tea_ci_lower_ttest <- delta_hat - tea_se * qt(0.975,df)
+tea_ci_upper_ttest <- delta_hat + tea_se * qt(0.975,df)
+```
+
+```{r}
+# Now the calculated CIs match those in the t-test outputs!
+t.test(tea_ratings, milk_ratings, var.equal=TRUE)
+```
+
+## Going to plot CIs for each condition
+
+as well as SEs, and visualizae how they're different
+
+```{r}
+confidence_level=.95 # you can change this
+# this formula below gives the critical t-value (as opposed to simply taken from the normal distribution)
+# qt(1 - (1 - confidence_level)/2, df = n - 1)
+
+
+tea_data_highn_summary_cis <- tea_data_highn %>%
+  group_by(condition) %>%
+  summarize(cond_mean = mean(rating), cond_sd = sd(rating), n=length(rating)) %>%
+  mutate(error = qt(1 - (1 - confidence_level)/2, df = n - 1)* (cond_sd/sqrt(n))) %>% # this calculates CIs WITHIN each condition
+  mutate(ci_upper = cond_mean + error, ci_lower = cond_mean - error) %>%
+  mutate(se_upper = cond_mean + cond_sd/sqrt(n), se_lower = cond_mean - cond_sd/sqrt(n))
+```
+
+Between subjects experiment -- lots of variability! I like to visualize the raw datas as well as the mean and CIs
+
+```{R}
+ggplot(data = tea_data_highn, aes(x=condition, y=rating, col=condition))  +
+  geom_jitter(width=.1, height=0, alpha=.3) + # visualizes all the raw data, with no variation in y-axis jitter
+  theme_few() +
+  geom_pointrange(data = tea_data_highn_summary_cis, aes(x=condition, y = cond_mean, ymin = ci_lower, ymax = ci_upper)) +
+  ylim(0,10) +
+  ggtitle('Tea ratings across conditions with CIs')
+
+```
+
+```{R}
+ggplot(data = tea_data_highn, aes(x=condition, y=rating, col=condition))  +
+  geom_jitter(width=.1, height=0, alpha=.5) + # visualizes all the raw data, with no variation in y-axis jitter
+  theme_few() +
+  geom_pointrange(data = tea_data_highn_summary_cis, aes(x=condition, y = cond_mean, ymin = se_lower, ymax = se_upper)) +
+  ylim(0,10) +
+  ggtitle('Tea ratings across condition with SE')
+
+```
+
+To do: What does each dot represnet? What does the range represent in each graph? What does the confidence interval indicate? What does the SE indicate?
+
+To do: how does this change when you use the low-n experiment?
+
+# Simulating p-values across multiple experiments
+
+To do: run this code
+
+First for low-n experiments
+
+```{r}
+all_results=tibble() 
+
+for (this_sim in 1:100) {
+  this_experiment = null_model %>%
+    filter(sim==this_sim) 
+  
+  tea_ratings <- filter(this_experiment, condition == "tea first")$rating
+  milk_ratings <- filter(this_experiment, condition == "milk first")$rating
+  
+  output = t.test(tea_ratings, milk_ratings)
+  
+  this_exp_output = tibble(pvalue = output$p.value)
+  all_results = bind_rows(all_results, this_exp_output)
+    
+}
+```
+
+To do: Look at the distribution of p-values (hint: in all_results\$pvalue)
+
+Make a histogram What is the distribution of p-values when the null is true?
+
+Calculate the proportion of p-values that are less than .05 What was our false positive rate?
+
+```{r}
+hist(all_results$pvalue)
+false_positive_rate<-mean(all_results$pvalue<.05)
+false_positive_rate
+```
+
+## Now for an experiment when there is actually an effect
+
+```{r}
+all_results_high_n=tibble() 
+
+for (this_sim in 1:100) {
+  this_experiment = samps_highn %>%
+    filter(sim==this_sim) 
+  
+  tea_ratings <- filter(this_experiment, condition == "tea first")$rating
+  milk_ratings <- filter(this_experiment, condition == "milk first")$rating
+  
+  output = t.test(tea_ratings, milk_ratings, paired = FALSE, var.equal = TRUE)
+  
+  this_exp_output = tibble(pvalue = output$p.value)
+  all_results_high_n = bind_rows(all_results_high_n, this_exp_output)
+    
+}
+```
+
+How often did we fail to reject the null hypothesis? When was our p-value greater than p=.05? What does the distribution of p-values look like?
+
+```{r}
+hist(all_results_high_n$pvalue)
+false_positive_rate<-mean(all_results_high_n$pvalue<.05)
+false_positive_rate
+```
+
+# To finish up
+
+Publish this to an rpubs (time to set up if you haven't!)
+
+# Excercises
+
+1.  Now go back (earlier in the code) and modify the DELTA in the simulation functions to be smaller so that there is only a small difference between groups. Is it still significant?
+
+2.  Rewrite this code with the the smaller sample size simulations. What changes?
+
+3.  Save out plots to your computer using "ggsave". You might need to query the function in R
+
+4.  Try some different plotting functions! https://rstudio.github.io/cheatsheets/html/data-visualization.html
