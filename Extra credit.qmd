@@ -1,0 +1,88 @@
+------------------------------------------------------------------------
+
+---
+title: "Psych201a, R Tutorial"
+author: "Helen Hui"
+date: "Wednesday, October 16, 2024"
+output:
+  html_document:
+    toc: true
+---
+
+```{r}
+chooseCRANmirror()
+install.packages("dplyr")
+install.packages("ggplot2")
+```
+
+```{r}
+install.packages("rmarkdown")
+1 / 200 * 30
+#> [1] 0.15
+(59 + 73 + 2) / 3
+#> [1] 44.66667
+sin(pi / 2)
+#> [1] 1
+```
+
+```{r}
+x <- 3 * 4
+primes <- c(2, 3, 5, 7, 11, 13)
+```
+
+```{r}
+primes * 2
+#> [1]  4  6 10 14 22 26
+primes - 1
+#> [1]  1  2  4  6 10 12
+object_name <- value
+```
+
+```{r}
+# create vector of primes
+primes <- c(2, 3, 5, 7, 11, 13)
+
+# multiply primes by 2
+primes * 2
+#> [1]  4  6 10 14 22 26
+```
+
+```{r}
+x 
+this_is_a_really_long_name <- 2.5
+r_rocks <- 2^3
+r_rock
+#> Error: object 'r_rock' not found
+R_rocks
+#> Error: object 'R_rocks' not found
+function_name(argument1 = value1, argument2 = value2, ...)
+```
+
+```{r}
+seq(from = 1, to = 10)
+#>  [1]  1  2  3  4  5  6  7  8  9 10
+seq(1, 10)
+#>  [1]  1  2  3  4  5  6  7  8  9 10
+x <- "hello world"
+```
+
+```{r}
+my_variable <- 10
+my_variable
+#> Error: object 'my_varıable' not found
+```
+
+```{r}
+library(tidyverse)
+ggplot(data = mpg,aes(x = displ,y = hwy)) + 
+  geom_point() +
+  geom_smooth(method = "lm")
+```
+
+```{r}
+my_bar_plot <- ggplot(mpg, aes(x = class)) +
+  geom_bar()
+my_scatter_plot <- ggplot(mpg, aes(x = cty, y = hwy)) +
+  geom_point()
+ggsave(filename = "mpg-plot.png", plot = my_bar_plot)
+```
