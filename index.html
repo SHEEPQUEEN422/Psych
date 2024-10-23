@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+ <head>
+   <!-- this is where we can load packages and files that we will use to help us build the experiment -->
+   <!-- let’s give the experiment a title (good style) - but it’s not critical to make things work -->
+   <title>hello world experiment</title>
+   <script src="https://unpkg.com/jspsych@8.0.0"></script>
+   <script src="https://unpkg.com/@jspsych/plugin-html-keyboard-response@2.0.0"></script>
+   <link href="https://unpkg.com/jspsych@8.0.0/css/jspsych.css" rel="stylesheet" type="text/css" />   
+ </head>
+ <body>
+ </body>
+ <script>
+   //this is where we will write JavaScript code to control the experiments
+   const jsPsych = initJsPsych();
+   const hello_trial = {
+      type: jsPsychHtmlKeyboardResponse,
+      stimulus: 'Hello world!',
+    }
+    jsPsych.run([hello_trial]);
+ </script>
+
+</html>
+
+
